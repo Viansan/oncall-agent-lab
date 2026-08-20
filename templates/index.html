@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>On-call Agent Lab</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23155f46'/%3E%3Cpath d='M18 34h8l4-12 7 24 4-12h6' fill='none' stroke='%23fffdf7' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211c;
+      --muted: #607068;
+      --paper: #f3f1e8;
+      --card: #fffdf7;
+      --line: #d7ddd7;
+      --green: #155f46;
+      --green-soft: #dcebe3;
+      --amber: #a75d16;
+      --amber-soft: #f7e8d5;
+      --shadow: 0 18px 48px rgba(31, 54, 43, .09);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 6%, rgba(248, 211, 159, .32), transparent 28rem),
+        radial-gradient(circle at 88% 18%, rgba(127, 183, 157, .24), transparent 24rem),
+        var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1160px, calc(100% - 32px)); margin: 0 auto; }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 22px 0;
+      font-size: 14px;
+    }
+    .brand { font-weight: 760; letter-spacing: -.02em; }
+    .synthetic-badge {
+      padding: 7px 11px;
+      color: var(--green);
+      background: var(--green-soft);
+      border: 1px solid rgba(21, 95, 70, .16);
+      border-radius: 999px;
+      font-weight: 650;
+    }
+
+    .hero { padding: 64px 0 46px; max-width: 850px; }
+    .eyebrow {
+      margin: 0 0 16px;
+      color: var(--amber);
+      font-size: 13px;
+      font-weight: 760;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 0;
+      max-width: 820px;
+      font-family: Georgia, "Songti SC", serif;
+      font-size: clamp(42px, 7vw, 78px);
+      line-height: 1.02;
+      letter-spacing: -.055em;
+    }
+    .hero p {
+      max-width: 720px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 20px);
+      line-height: 1.75;
+    }
+
+    .stage-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 34px;
+    }
+    .stage {
+      min-height: 190px;
+      padding: 22px;
+      background: rgba(255, 253, 247, .78);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+    .stage-index { color: var(--amber); font: 700 13px Georgia, serif; }
+    .stage h2 { margin: 24px 0 8px; font-size: 20px; }
+    .stage p { margin: 0; color: var(--muted); line-height: 1.65; font-size: 14px; }
+
+    .lab {
+      margin: 16px 0 28px;
+      padding: clamp(22px, 4vw, 40px);
+      background: var(--card);
+      border: 1px solid rgba(23, 33, 28, .11);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+    .lab-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+    .lab h2 { margin: 0 0 7px; font-size: 27px; letter-spacing: -.025em; }
+    .lab-head p { margin: 0; color: var(--muted); }
+    .micro { max-width: 340px; text-align: right; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    .query-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: white;
+      color: var(--ink);
+      border-radius: 13px;
+      padding: 13px 15px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(21, 95, 70, .1); }
+    .primary {
+      border: 0;
+      border-radius: 13px;
+      padding: 0 20px;
+      background: var(--green);
+      color: white;
+      font-weight: 720;
+    }
+    .primary:disabled { opacity: .55; cursor: wait; }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 24px; }
+    .chip {
+      padding: 7px 10px;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+    }
+    .chip:hover { border-color: var(--green); color: var(--green); }
+
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .result-column { padding: 18px; background: #f8f7f1; border-radius: 18px; }
+    .result-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .result-title strong { font-size: 14px; }
+    .method-tag { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, monospace; }
+    .empty { padding: 30px 8px; color: var(--muted); font-size: 14px; text-align: center; }
+    .result {
+      padding: 13px 0;
+      border-top: 1px solid var(--line);
+    }
+    .result:first-child { border-top: 0; }
+    .result-top { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+    .result-name { font-weight: 720; }
+    .score { color: var(--green); font: 12px ui-monospace, SFMono-Regular, monospace; }
+    .snippet { margin: 7px 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .reason { color: var(--amber); font-size: 11px; }
+
+    .agent-controls { display: grid; grid-template-columns: 1fr 150px auto; gap: 10px; }
+    .agent-output { display: grid; grid-template-columns: 1.25fr .75fr; gap: 14px; margin-top: 22px; }
+    .answer, .trace {
+      min-height: 210px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #f8f7f1;
+    }
+    .panel-label { margin-bottom: 13px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+    .answer-body { white-space: pre-wrap; font-size: 14px; line-height: 1.7; }
+    .trace-list { display: grid; gap: 9px; }
+    .trace-event { padding: 10px; background: white; border: 1px solid var(--line); border-radius: 12px; }
+    .trace-type { color: var(--green); font: 11px ui-monospace, SFMono-Regular, monospace; }
+    .trace-doc { margin-top: 4px; font-size: 13px; font-weight: 700; }
+    .trace-preview { margin-top: 5px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .principles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 8px 0 70px;
+    }
+    .principle { padding: 24px; border-top: 1px solid var(--line); }
+    .principle h3 { margin: 0 0 8px; font-size: 16px; }
+    .principle p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+    .status { min-height: 20px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+    .error { color: #a7352b; }
+
+    @media (max-width: 780px) {
+      .stage-grid, .compare-grid, .agent-output, .principles { grid-template-columns: 1fr; }
+      .agent-controls { grid-template-columns: 1fr; }
+      .primary { min-height: 46px; }
+      .lab-head { display: block; }
+      .micro { margin-top: 8px; text-align: left; }
+      .hero { padding-top: 38px; }
+    }
+  </style>
+</head>
+<body data-live-configured="__LIVE_CONFIGURED__">
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">On-call Agent Lab</div>
+      <div class="synthetic-badge">100% 合成数据</div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Product experiment · retrieval → agent</p>
+        <h1>同一个值守问题，为什么要升级三次解法？</h1>
+        <p>这个实验不追求堆功能。它用同一组合成运行手册，比较关键词检索、可解释的轻量语义检索，以及带白名单只读工具的 Agent，观察每次升级真正解决了什么，又增加了哪些成本和风险。</p>
+      </section>
+
+      <section class="stage-grid" aria-label="三阶段演进">
+        <article class="stage"><div class="stage-index">01</div><h2>关键词检索</h2><p>低成本、低延迟、容易解释。遇到用户换一种说法时，可能直接漏掉正确手册。</p></article>
+        <article class="stage"><div class="stage-index">02</div><h2>轻量语义检索</h2><p>把领域同义表达映射到概念向量，覆盖常见改写；代价是要维护领域词典，不能泛化到未知问题。</p></article>
+        <article class="stage"><div class="stage-index">03</div><h2>工具调用 Agent</h2><p>根据问题选择一到两份手册、展示读取轨迹并组织答案；同时引入模型成本、延迟和错误决策风险。</p></article>
+      </section>
+
+      <section class="lab">
+        <div class="lab-head">
+          <div><h2>先比较检索</h2><p>输入同一句话，观察两个检索器为什么返回不同结果。</p></div>
+          <div class="micro">语义阶段是“领域概念词典 + 向量相似度”的透明离线基线，不冒充通用 Embedding 模型。</div>
+        </div>
+        <div class="query-row">
+          <input id="compare-query" value="刚发布的知识文章怎么都搜不到" maxlength="200" aria-label="检索问题">
+          <button class="primary" id="compare-button">比较结果</button>
+        </div>
+        <div class="presets">
+          <button class="chip" data-query="网关错误率突然升高">精确表达</button>
+          <button class="chip" data-query="用户保存时一直转圈，最后提示操作失败">同义改写</button>
+          <button class="chip" data-query="新上传文件既无法预览，也无法搜索">跨服务</button>
+          <button class="chip" data-query="怎么申请差旅报销">超出边界</button>
+        </div>
+        <div class="compare-grid">
+          <div class="result-column"><div class="result-title"><strong>关键词结果</strong><span class="method-tag">BM25-style</span></div><div id="keyword-results" class="empty">等待查询</div></div>
+          <div class="result-column"><div class="result-title"><strong>语义结果</strong><span class="method-tag">concept vector</span></div><div id="semantic-results" class="empty">等待查询</div></div>
+        </div>
+        <div class="status" id="compare-status"></div>
+      </section>
+
+      <section class="lab">
+        <div class="lab-head">
+          <div><h2>再观察 Agent</h2><p>回答与工具轨迹分开显示；读取文档不等于答案一定正确。</p></div>
+          <div class="micro">离线模式零外部调用，可用于评测。Live 模式仅在本地配置通用兼容接口后开放。</div>
+        </div>
+        <div class="agent-controls">
+          <input id="agent-query" value="新上传文件既无法预览，也无法搜索" maxlength="500" aria-label="Agent 问题">
+          <select id="agent-mode" aria-label="Agent 模式">
+            <option value="offline">离线可复现</option>
+            <option value="live">Live 工具调用</option>
+          </select>
+          <button class="primary" id="agent-button">运行 Agent</button>
+        </div>
+        <div class="agent-output">
+          <div class="answer"><div class="panel-label">ANSWER · 回答</div><div id="agent-answer" class="answer-body">等待运行</div></div>
+          <div class="trace"><div class="panel-label">TRACE · 工具轨迹</div><div id="agent-trace" class="trace-list"><div class="empty">尚未调用工具</div></div></div>
+        </div>
+        <div class="status" id="agent-status"></div>
+      </section>
+
+      <section class="principles">
+        <article class="principle"><h3>升级必须有理由</h3><p>只有当上一阶段在统一问题集上暴露稳定缺口，才引入更复杂的机制。</p></article>
+        <article class="principle"><h3>工具必须有边界</h3><p>Agent 只接受白名单文档 ID，不能列目录、拼接路径、写文件或执行命令。</p></article>
+        <article class="principle"><h3>轨迹不是正确性</h3><p>展示“调用了什么”帮助审计，但最终仍要检查选文档、引用和处置建议。</p></article>
+        <article class="principle"><h3>不知道就停</h3><p>知识库不覆盖的问题不强行回答；拒答和转人工是产品能力的一部分。</p></article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const compareQuery = document.getElementById('compare-query');
+    const compareButton = document.getElementById('compare-button');
+    const compareStatus = document.getElementById('compare-status');
+    const keywordResults = document.getElementById('keyword-results');
+    const semanticResults = document.getElementById('semantic-results');
+    const agentQuery = document.getElementById('agent-query');
+    const agentMode = document.getElementById('agent-mode');
+    const agentButton = document.getElementById('agent-button');
+    const agentAnswer = document.getElementById('agent-answer');
+    const agentTrace = document.getElementById('agent-trace');
+    const agentStatus = document.getElementById('agent-status');
+
+    if (document.body.dataset.liveConfigured !== 'true') {
+      agentMode.querySelector('option[value="live"]').textContent = 'Live 工具调用（未配置）';
+    }
+
+    function resultCard(item) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'result';
+      const top = document.createElement('div');
+      top.className = 'result-top';
+      const name = document.createElement('span');
+      name.className = 'result-name';
+      name.textContent = item.title;
+      const score = document.createElement('span');
+      score.className = 'score';
+      score.textContent = Number(item.score).toFixed(3);
+      top.append(name, score);
+      const snippet = document.createElement('div');
+      snippet.className = 'snippet';
+      snippet.textContent = item.snippet;
+      const reason = document.createElement('div');
+      reason.className = 'reason';
+      reason.textContent = (item.reasons || []).join(' · ') || '无额外解释';
+      wrapper.append(top, snippet, reason);
+      return wrapper;
+    }
+
+    function renderResults(container, items) {
+      container.replaceChildren();
+      container.className = '';
+      if (!items.length) {
+        container.className = 'empty';
+        container.textContent = '没有达到返回条件的文档';
+        return;
+      }
+      items.forEach(item => container.appendChild(resultCard(item)));
+    }
+
+    async function compare() {
+      const query = compareQuery.value.trim();
+      if (!query) return;
+      compareButton.disabled = true;
+      compareStatus.textContent = '正在比较…';
+      compareStatus.className = 'status';
+      try {
+        const response = await fetch(`/api/compare?q=${encodeURIComponent(query)}`);
+        if (!response.ok) throw new Error(`请求失败：${response.status}`);
+        const payload = await response.json();
+        renderResults(keywordResults, payload.keyword || []);
+        renderResults(semanticResults, payload.semantic || []);
+        compareStatus.textContent = '同一问题、同一知识库；差异只来自检索策略。';
+      } catch (error) {
+        compareStatus.textContent = error.message;
+        compareStatus.className = 'status error';
+      } finally {
+        compareButton.disabled = false;
+      }
+    }
+
+    function renderTrace(events) {
+      agentTrace.replaceChildren();
+      if (!events.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = '未调用工具：Agent 在知识边界前停止';
+        agentTrace.appendChild(empty);
+        return;
+      }
+      events.forEach(event => {
+        const card = document.createElement('div');
+        card.className = 'trace-event';
+        const type = document.createElement('div');
+        type.className = 'trace-type';
+        type.textContent = `${event.type} · ${event.tool}`;
+        const doc = document.createElement('div');
+        doc.className = 'trace-doc';
+        doc.textContent = event.arguments.document_id || '未知文档';
+        card.append(type, doc);
+        if (event.preview) {
+          const preview = document.createElement('div');
+          preview.className = 'trace-preview';
+          preview.textContent = event.preview;
+          card.appendChild(preview);
+        }
+        agentTrace.appendChild(card);
+      });
+    }
+
+    async function runAgent() {
+      const message = agentQuery.value.trim();
+      if (!message) return;
+      agentButton.disabled = true;
+      agentStatus.textContent = '正在规划并读取手册…';
+      agentStatus.className = 'status';
+      try {
+        const response = await fetch('/v3/chat', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({message, mode: agentMode.value})
+        });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.detail || `请求失败：${response.status}`);
+        agentAnswer.textContent = payload.answer;
+        renderTrace(payload.trace || []);
+        agentStatus.textContent = `${payload.mode} · ${payload.latency_ms} ms · ${payload.usage.tool_calls || 0} 次工具调用 · ${payload.boundary ? '边界停止' : '已生成有据回答'}`;
+      } catch (error) {
+        agentAnswer.textContent = '本轮未生成回答。';
+        renderTrace([]);
+        agentStatus.textContent = error.message;
+        agentStatus.className = 'status error';
+      } finally {
+        agentButton.disabled = false;
+      }
+    }
+
+    compareButton.addEventListener('click', compare);
+    agentButton.addEventListener('click', runAgent);
+    compareQuery.addEventListener('keydown', event => { if (event.key === 'Enter') compare(); });
+    agentQuery.addEventListener('keydown', event => { if (event.key === 'Enter') runAgent(); });
+    document.querySelectorAll('[data-query]').forEach(button => button.addEventListener('click', () => {
+      compareQuery.value = button.dataset.query;
+      compare();
+    }));
+
+    compare();
+    runAgent();
+  </script>
+</body>
+</html>

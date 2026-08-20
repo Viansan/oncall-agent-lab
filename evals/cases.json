@@ -1,0 +1,93 @@
+[
+  {
+    "id": "exact-gateway",
+    "category": "精确表达",
+    "query": "网关错误率突然升高",
+    "expected_documents": ["rb-gateway"],
+    "boundary": false
+  },
+  {
+    "id": "paraphrase-gateway",
+    "category": "同义改写",
+    "query": "用户保存时一直转圈，最后提示操作失败",
+    "expected_documents": ["rb-gateway"],
+    "boundary": false
+  },
+  {
+    "id": "exact-stream",
+    "category": "精确表达",
+    "query": "任务队列积压",
+    "expected_documents": ["rb-stream"],
+    "boundary": false
+  },
+  {
+    "id": "paraphrase-stream",
+    "category": "同义改写",
+    "query": "异步处理一直不往前走，待处理数字持续增加",
+    "expected_documents": ["rb-stream"],
+    "boundary": false
+  },
+  {
+    "id": "exact-search",
+    "category": "精确表达",
+    "query": "检索索引延迟",
+    "expected_documents": ["rb-search"],
+    "boundary": false
+  },
+  {
+    "id": "paraphrase-search",
+    "category": "同义改写",
+    "query": "刚发布的知识文章怎么都搜不到",
+    "expected_documents": ["rb-search"],
+    "boundary": false
+  },
+  {
+    "id": "exact-preview",
+    "category": "精确表达",
+    "query": "文件预览失败",
+    "expected_documents": ["rb-preview"],
+    "boundary": false
+  },
+  {
+    "id": "paraphrase-preview",
+    "category": "同义改写",
+    "query": "上传的演示文稿只有灰色占位图",
+    "expected_documents": ["rb-preview"],
+    "boundary": false
+  },
+  {
+    "id": "exact-identity",
+    "category": "精确表达",
+    "query": "登录后会话失效",
+    "expected_documents": ["rb-identity"],
+    "boundary": false
+  },
+  {
+    "id": "paraphrase-identity",
+    "category": "同义改写",
+    "query": "用户不断被退出，需要反复登录",
+    "expected_documents": ["rb-identity"],
+    "boundary": false
+  },
+  {
+    "id": "cross-service",
+    "category": "跨服务",
+    "query": "新上传文件既无法预览，也无法搜索",
+    "expected_documents": ["rb-preview", "rb-search"],
+    "boundary": false
+  },
+  {
+    "id": "boundary-finance",
+    "category": "知识边界",
+    "query": "怎么申请差旅报销",
+    "expected_documents": [],
+    "boundary": true
+  },
+  {
+    "id": "boundary-office",
+    "category": "知识边界",
+    "query": "办公室空调太冷怎么办",
+    "expected_documents": [],
+    "boundary": true
+  }
+]
